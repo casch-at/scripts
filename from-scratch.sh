@@ -60,6 +60,7 @@ function usage()
                        is in the --build list. (default $GCC_LIB_PREFIX)
     --gcc-prefix       GCC install prefix or prefix path to GCC, if gcc isn't in
                        the --build list. (default $GCC_PREFIX)
+    --gcc-version      The GCC version to build.
     --help             Print this help.
     --jobs             How many jobs should be used to build the package.
                        (default $CORES)
@@ -76,8 +77,8 @@ EOF
 }
 
 TEMP=$(getopt -o - -n $SCRIPT_NAME \
-              -l build:,cmake-gen,jobs:,gcc-prefix:,gcc-lib-prefix:,prefix: \
-              -l llvm-prefix:,llvm-version:,with-lldb,build-dir:,help \
+              -l build:,cmake-gen,jobs:,gcc-prefix:,gcc-lib-prefix:,gcc-verion: \
+              -l prefix:,llvm-prefix:,llvm-version:,with-lldb,build-dir:,help \
               -- "$@")
 
 eval set -- "$TEMP"
@@ -89,6 +90,7 @@ while true; do
         --jobs) CORES=$2; shift 2 ;;
         --gcc-prefix) GCC_PREFIX=$2; shift 2 ;;
         --gcc-lib-prefix) GCC_LIB_PREFIX=$2; shift 2 ;;
+        --gcc-version) GCC_VERSION=$2; shift 2 ;;
         --prefix) INSTALL_PREFIX=$2; shift 2 ;;
         --llvm-prefix) LLVM_INSTALL_PREFIX=$2; shift 2 ;;
         --llvm-version) LLVM_VERSION=$2; shift 2 ;;
@@ -99,12 +101,6 @@ while true; do
         *) echo "Incorrect argument given -> $1"; usage; exit 255 ;;
     esac
 done
-
-if [ -z "$BUILD_DIR" ]; then
-    # TODO(cschwarzgruber): Create temporary directory for building.
-    echo "You need to implement this :-)"
-    usage; exit 1
-fi
 
 if [ -z "$INSTALL_PREFIX" ]; then
     echo "You need to provide the install prefix path: --prefix"
@@ -166,7 +162,6 @@ function compile_install_gdb()
 # from scratch.
 function compile_install_gcc()
 {
-  local GCC_VERSION=5.2.0
   local GCC_TAR=gcc-$GCC_VERSION.tar.bz2
 
   test ! -d gcc-$GCC_VERSION &&
@@ -333,13 +328,13 @@ function compile_install_rtags()
 	-DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$GCC_LIB_PREFIX/lib64 -Wl,-rpath,$GCC_LIB_PREFIX/lib -Wl,-rpath,$LLVM_INSTALL_PREFIX/lib64 -Wl,-rpath,$LLVM_INSTALL_PREFIX/lib" \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
   eval $CMAKE_BUILD
-  eval $CMAKE_INSTALL
+  eval $CMAKE_INSTALL_RELEASE
 }
 
 
 for pkg in ${BUILD_LIST/;/ }; do
-  # TODO(cschwarzgruber): Build into temporary directory if --build-dir was not specified.
   if [ -z "$BUILD_DIR" ]; then
+      # TODO(cschwarzgruber): Build into temporary directory if --build-dir was not specified.
       BUILD_DIR=/home/cschwarzgruber/Temp/bdir
   fi
   test -d $BUILD_DIR || mkdir -p $BUILD_DIR
