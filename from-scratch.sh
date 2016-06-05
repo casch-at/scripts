@@ -36,11 +36,16 @@ CORES=${CORES-$(grep -c ^processor /proc/cpuinfo)}
 BUILD_LIST=${BUILD_LIST-}
 BUILD_DIR=${BUILD_DIR-}
 INSTALL_PREFIX=${INSTALL_PREFIX-}
+
 GCC_PREFIX=${GCC_PREFIX-$(dirname "$(dirname "$(which gcc)")")}
 GCC_LIB_PREFIX=${GCC_LIB_PREFIX-/usr}
 GDB_INSTALL_PREFIX=${GDB_INSTALL_PREFIX-$HOME/rtest/gdb}
-LLVM_INSTALL_PREFIX=${LLVM_INSTALL_PREFIX-$INSTALL_PREFIX}
+
 CGTOOL=${CGTOOL-Ninja}
+
+LLVM_INSTALL_PREFIX=${LLVM_INSTALL_PREFIX-$INSTALL_PREFIX}
+LLVM_TARGETS=${LLVM_TARGETS-"X86;ARM;CppBackend"}
+
 
 if [ "$(uname -m)" = "x86_64" ]; then
     ARCH=64
@@ -73,8 +78,14 @@ function usage()
                        (default $CORES)
     --llvm-prefix      LLVM/Clang installation prefix, defaults to --prefix.
     --llvm-version     The LLVM/Clang version to install.
+    --llvm-targets     For what targets llvm should be built (default $LLVM_TARGETS).
     --with-lldb        Whether to build LLVM debuger or not (default OFF)
     --prefix           General installation prefix.
+
+
+    Useful websites:
+    - LLVM build instruction for LLVM 3.8.0
+      http://llvm.org/releases/3.8.0/docs/CMake.html
 
     Available packages to build:
 
@@ -101,22 +112,28 @@ while true; do
         --prefix) INSTALL_PREFIX=$2; shift 2 ;;
         --llvm-prefix) LLVM_INSTALL_PREFIX=$2; shift 2 ;;
         --llvm-version) LLVM_VERSION=$2; shift 2 ;;
+        --llvm-targets) LLVM_TARGETS=$2; shift 2 ;;
         --with-lldb) WITH_LLDB=1; shift 1 ;;
         --build-dir) BUILD_DIR=$2; shift 2 ;;
         --help) usage; exit 0 ;;
         --) shift; break ;;
-        *) echo "Incorrect argument given -> $1"; usage; exit 255 ;;
+        *) echo "[ERROR] Unknown argument '$1' given "; usage; exit 255 ;;
     esac
 done
 
 if [ -z "$INSTALL_PREFIX" ]; then
-    echo "You need to provide the install prefix path: --prefix"
+    echo "[ERROR] You need to provide the install prefix path: --prefix"
     usage; exit 1
 fi
 
 if [ -z "$BUILD_LIST" ]; then
-    echo -n "Don't know what to build, please provide a semicolon seperated "
-    echo "list of software packages to build."
+    echo -n "[ERROR] Don't know what to build, please provide a semicolon "
+    echo "seperated list of software packages to build."
+    usage; exit 1
+fi
+
+if [[ "$BUILD_LIST" =~ llvm ]] && [ -z "$LLVM_VERSION" ]; then
+    echo "[ERROR] You need to specify the llvm version."
     usage; exit 1
 fi
 
@@ -235,7 +252,7 @@ function compile_install_llvm()
         -DCMAKE_BUILD_TYPE=Release                                            \
         -DCMAKE_INSTALL_PREFIX="$LLVM_INSTALL_PREFIX"                         \
         -DLLVM_LIBDIR_SUFFIX=$ARCH                                            \
-        -DLLVM_TARGETS_TO_BUILD="X86;ARM;CppBackend"                          \
+        -DLLVM_TARGETS_TO_BUILD="$LLVM_TARGETS"                               \
         -DLLVM_BUILD_EXAMPLES=OFF                                             \
         -DLLVM_INCLUDE_EXAMPLES=OFF                                           \
         -DLLVM_INCLUDE_TESTS=OFF                                              \
@@ -292,7 +309,7 @@ function compile_install_rtags()
 	-DCMAKE_C_COMPILER=$GCC_PREFIX/bin/gcc \
 	-DCMAKE_CXX_COMPILER=$GCC_PREFIX/bin/g++ \
 	-DLIBCLANG_LLVM_CONFIG_EXECUTABLE=$LLVM_INSTALL_PREFIX/bin/llvm-config \
-	-DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$GCC_LIB_PREFIX/lib64 -Wl,-rpath,$GCC_LIB_PREFIX/lib -Wl,-rpath,$LLVM_INSTALL_PREFIX/lib64 -Wl,-rpath,$LLVM_INSTALL_PREFIX/lib" \
+	-DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$GCC_LIB_PREFIX/lib$ARCH -Wl,-rpath,$GCC_LIB_PREFIX/lib -Wl,-rpath,$LLVM_INSTALL_PREFIX/lib$ARCH -Wl,-rpath,$LLVM_INSTALL_PREFIX/lib" \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
   eval $CMAKE_BUILD
   eval $CMAKE_INSTALL_RELEASE
