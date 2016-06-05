@@ -42,6 +42,13 @@ GDB_INSTALL_PREFIX=${GDB_INSTALL_PREFIX-$HOME/rtest/gdb}
 LLVM_INSTALL_PREFIX=${LLVM_INSTALL_PREFIX-$INSTALL_PREFIX}
 CGTOOL=${CGTOOL-Ninja}
 
+if [ "$(uname -m)" = "x86_64" ]; then
+    ARCH=64
+else
+    ARCH=32
+fi
+readonly ARCH
+
 ### Logic
 
 function usage()
@@ -198,8 +205,8 @@ function compile_install_gcc()
       --enable-gnu-indirect-function \
       --with-arch_32=i686 \
       --with-tune=generic \
-      --build=x86_64-redhat-linux \
-      --host=x86_64-redhat-linux \
+      --build="$(uname -m)-redhat-linux" \
+      --host="$(uname -m)-redhat-linux" \
       --enable-languages=c,c++,objc
   eval $MAKE_BUILD
   eval $MAKE_INSTALL
@@ -267,7 +274,7 @@ function compile_install_llvm_clang()
         -DCMAKE_C_COMPILER="$GCC_PREFIX/bin/gcc"                              \
         -DCMAKE_BUILD_TYPE=Release                                            \
         -DCMAKE_INSTALL_PREFIX="$LLVM_INSTALL_PREFIX"                         \
-        -DLLVM_LIBDIR_SUFFIX=64                                               \
+        -DLLVM_LIBDIR_SUFFIX=$ARCH                                            \
         -DLLVM_TARGETS_TO_BUILD="X86;ARM;CppBackend"                          \
         -DLLVM_BUILD_EXAMPLES=OFF                                             \
         -DLLVM_INCLUDE_EXAMPLES=OFF                                           \
@@ -332,12 +339,12 @@ function compile_install_rtags()
 }
 
 
+if [ -z "$BUILD_DIR" ]; then
+    BUILD_DIR=$(mktemp -d "from-scratch-XXX")
+fi
+test -d $BUILD_DIR || mkdir -p $BUILD_DIR
+
 for pkg in ${BUILD_LIST/;/ }; do
-  if [ -z "$BUILD_DIR" ]; then
-      # TODO(cschwarzgruber): Build into temporary directory if --build-dir was not specified.
-      BUILD_DIR=/home/cschwarzgruber/Temp/bdir
-  fi
-  test -d $BUILD_DIR || mkdir -p $BUILD_DIR
   cd $BUILD_DIR
   compile_install_$pkg
 done
