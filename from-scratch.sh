@@ -28,7 +28,7 @@ readonly MAKE_INSTALL='$MAKE install'
 
 ### Available packages
 
-readonly LIST="llvm_clang gcc rtags gdb"
+readonly LIST="llvm gcc rtags"
 
 ### Customizable variables
 
@@ -120,46 +120,6 @@ if [ -z "$BUILD_LIST" ]; then
     usage; exit 1
 fi
 
-################# COMPILER's START
-# Put compilers into a seperate path. It's easier to uninstall (remove) it later.
-# GCC doesn't provide an uninstall target, for example.
-# Use two seperate variables for GCC to use icecc e.g. to distribute the jobs
-# among multiple machines.
-################# COMPILER's END
-
-function compile_install_gdb()
-{
-  local GDB_VERSION=7.10.1
-  local GDB_TAR=gdb-$GDB_VERSION.tar.gz
-
-
-  test ! -d gdb-$GDB_VERSION &&
-      test ! -f $GDB_TAR &&
-      wget http://ftp.gnu.org/gnu/gdb/gdb-$GDB_VERSION/$GDB_TAR
-
-  test ! -d gdb-$GDB_VERSION &&
-      tar xf $GDB_TAR
-
-  cd gdb-$GDB_VERSION
-  test -d build &&
-      rm -rf build
-  mkdir -p build
-  cd build
-  ../configure --prefix=$GDB_INSTALL_PREFIX \
-               --target=arm-buildroot-linux-uclibcgnueabi
-  $MAKE
-  $MAKE install
-
-  cd ../gdb/gdbserver
-  test -d build && rm -rf build
-  mkdir -p build
-  cd build
-  ../configure --prefix=$GDB_INSTALL_PREFIX \
-               --host=arm-buildroot-linux-uclibcgnueabi
-  eval $MAKE_BUILD
-  eval $MAKE_INSTALL
-}
-
 # Requires:
 #  - gmp-devel
 #  - mpfr-devel
@@ -212,7 +172,7 @@ function compile_install_gcc()
   eval $MAKE_INSTALL
 }
 
-function compile_install_llvm_clang()
+function compile_install_llvm()
 {
   local COMPRESSION
   if echo "$LLVM_VERSION" "3.5" | awk '{exit $1<$2?0:1}'; then
