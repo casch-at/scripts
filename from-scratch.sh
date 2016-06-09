@@ -35,17 +35,18 @@ readonly LIST="llvm gcc rtags"
 CORES=${CORES-$(grep -c ^processor /proc/cpuinfo)}
 BUILD_LIST=${BUILD_LIST-}
 BUILD_DIR=${BUILD_DIR-}
-INSTALL_PREFIX=${INSTALL_PREFIX-}
+INSTALL_PREFIX=${INSTALL_PREFIX-/usr/local}
 
 GCC_PREFIX=${GCC_PREFIX-$(dirname "$(dirname "$(which gcc)")")}
 GCC_LIB_PREFIX=${GCC_LIB_PREFIX-/usr}
+GCC_VERSION=${GCC_VERSION-6.1.0}
 GDB_INSTALL_PREFIX=${GDB_INSTALL_PREFIX-$HOME/rtest/gdb}
 
 CGTOOL=${CGTOOL-Ninja}
 
 LLVM_INSTALL_PREFIX=${LLVM_INSTALL_PREFIX-$INSTALL_PREFIX}
-LLVM_TARGETS=${LLVM_TARGETS-"X86;ARM;CppBackend"}
-
+LLVM_TARGETS=${LLVM_TARGETS-X86;ARM}
+LLVM_VERSION=${LLVM_VERSION-3.8.0}
 
 if [ "$(uname -m)" = "x86_64" ]; then
     ARCH=64
@@ -72,15 +73,15 @@ function usage()
                        is in the --build list. (default $GCC_LIB_PREFIX)
     --gcc-prefix       GCC install prefix or prefix path to GCC, if gcc isn't in
                        the --build list. (default $GCC_PREFIX)
-    --gcc-version      The GCC version to build.
+    --gcc-version      The GCC version to build (default $GCC_VERSION).
     --help             Print this help.
     --jobs             How many jobs should be used to build the package.
                        (default $CORES)
     --llvm-prefix      LLVM/Clang installation prefix, defaults to --prefix.
-    --llvm-version     The LLVM/Clang version to install.
+    --llvm-version     The LLVM/Clang version to install (default $LLVM_VERSION).
     --llvm-targets     For what targets llvm should be built (default $LLVM_TARGETS).
-    --with-lldb        Whether to build LLVM debuger or not (default OFF)
-    --prefix           General installation prefix.
+    --with-lldb        Whether to build LLVM debuger or not (default OFF).
+    --prefix           General installation prefix (default $INSTALL_PREFIX).
 
 
     Useful websites:
@@ -94,9 +95,9 @@ function usage()
 EOF
 }
 
-TEMP=$(getopt -o - -n $SCRIPT_NAME \
-              -l build:,cmake-gen,jobs:,gcc-prefix:,gcc-lib-prefix:,gcc-version: \
-              -l prefix:,llvm-prefix:,llvm-version:,with-lldb,build-dir:,help \
+TEMP=$(getopt -o - -n $SCRIPT_NAME                                                      \
+              -l build:,cmake-gen,jobs:,gcc-prefix:,gcc-lib-prefix:,gcc-version:        \
+              -l prefix:,llvm-prefix:,llvm-version:,with-lldb,build-dir:,help           \
               -- "$@")
 
 eval set -- "$TEMP"
@@ -120,11 +121,6 @@ while true; do
         *) echo "[ERROR] Unknown argument '$1' given "; usage; exit 255 ;;
     esac
 done
-
-if [ -z "$INSTALL_PREFIX" ]; then
-    echo "[ERROR] You need to provide the install prefix path: --prefix"
-    usage; exit 1
-fi
 
 if [ -z "$BUILD_LIST" ]; then
     echo -n "[ERROR] Don't know what to build, please provide a semicolon "
@@ -161,11 +157,8 @@ function compile_install_gcc()
       tar xf $GCC_TAR
 
   cd gcc-$GCC_VERSION
-  test -d build && rm -rf build
   mkdir -p build
   cd build
-
-  test -z "$GCC_PREFIX" && GCC_PREFIX=$INSTALL_PREFIX
 
   ../configure                                  \
       --prefix=$GCC_PREFIX                      \
