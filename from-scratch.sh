@@ -95,7 +95,7 @@ EOF
 }
 
 TEMP=$(getopt -o - -n $SCRIPT_NAME \
-              -l build:,cmake-gen,jobs:,gcc-prefix:,gcc-lib-prefix:,gcc-verion: \
+              -l build:,cmake-gen,jobs:,gcc-prefix:,gcc-lib-prefix:,gcc-version: \
               -l prefix:,llvm-prefix:,llvm-version:,with-lldb,build-dir:,help \
               -- "$@")
 
@@ -137,6 +137,11 @@ if [[ "$BUILD_LIST" =~ llvm ]] && [ -z "$LLVM_VERSION" ]; then
     usage; exit 1
 fi
 
+if [[ "$BUILD_LIST" =~ gcc ]] && [ -z "$GCC_VERSION" ]; then
+    echo "[ERROR] You need to specify the gcc version."
+    usage; exit 1
+fi
+
 # Requires:
 #  - gmp-devel
 #  - mpfr-devel
@@ -156,35 +161,40 @@ function compile_install_gcc()
       tar xf $GCC_TAR
 
   cd gcc-$GCC_VERSION
+  test -d build && rm -rf build
   mkdir -p build
   cd build
-  ../configure \
-      --prefix=$GCC_PREFIX \
-      --with-system-zlib \
-      --without-included-gettext \
-      --enable-threads=posix \
-      --enable-nls \
-      --enable-objc-gc \
-      --enable-clocale=gnu \
-      --enable-plugin \
-      --enable-multilib \
-      --enable-checking=release \
-      --enable-__cxa_atexit \
-      --enable-gnu-unique-object \
-      --disable-libunwind-exceptions \
-      --enable-linker-build-id \
-      --with-linker-hash-style=gnu \
-      --enable-initfini-array \
-      --disable-libgcj \
-      --enable-bootstrap \
-      --with-isl \
-      --enable-libmpx \
-      --enable-gnu-indirect-function \
-      --with-arch_32=i686 \
-      --with-tune=generic \
-      --build="$(uname -m)-redhat-linux" \
-      --host="$(uname -m)-redhat-linux" \
+
+  test -z "$GCC_PREFIX" && GCC_PREFIX=$INSTALL_PREFIX
+
+  ../configure                                  \
+      --prefix=$GCC_PREFIX                      \
+      --with-system-zlib                        \
+      --without-included-gettext                \
+      --enable-threads=posix                    \
+      --enable-nls                              \
+      --enable-objc-gc                          \
+      --enable-clocale=gnu                      \
+      --enable-plugin                           \
+      --enable-multilib                         \
+      --enable-checking=release                 \
+      --enable-__cxa_atexit                     \
+      --enable-gnu-unique-object                \
+      --disable-libunwind-exceptions            \
+      --enable-linker-build-id                  \
+      --with-linker-hash-style=gnu              \
+      --enable-initfini-array                   \
+      --disable-libgcj                          \
+      --enable-bootstrap                        \
+      --with-isl                                \
+      --enable-libmpx                           \
+      --enable-gnu-indirect-function            \
+      --with-arch_32=i686                       \
+      --with-tune=generic                       \
+      --build="$(uname -m)-redhat-linux"        \
+      --host="$(uname -m)-redhat-linux"         \
       --enable-languages=c,c++,objc
+
   eval $MAKE_BUILD
   eval $MAKE_INSTALL
 }
@@ -245,31 +255,31 @@ function compile_install_llvm()
 
   test -z "$LLVM_INSTALL_PREFIX" && LLVM_INSTALL_PREFIX=$INSTALL_PREFIX
 
-  # http://llvm.org/releases/3.8.0/docs/CMake.html
-  $CMAKE ../ -G "$CGTOOL"                                                     \
-        -DCMAKE_CXX_COMPILER="$GCC_PREFIX/bin/g++"                            \
-        -DCMAKE_C_COMPILER="$GCC_PREFIX/bin/gcc"                              \
-        -DCMAKE_BUILD_TYPE=Release                                            \
-        -DCMAKE_INSTALL_PREFIX="$LLVM_INSTALL_PREFIX"                         \
-        -DLLVM_LIBDIR_SUFFIX=$ARCH                                            \
-        -DLLVM_TARGETS_TO_BUILD="$LLVM_TARGETS"                               \
-        -DLLVM_BUILD_EXAMPLES=OFF                                             \
-        -DLLVM_INCLUDE_EXAMPLES=OFF                                           \
-        -DLLVM_INCLUDE_TESTS=OFF                                              \
-        -DLLVM_APPEND_VC_REV=OFF                                              \
-        -DLLVM_ENABLE_CXX1Y=ON                                                \
-        -DLLVM_ENABLE_ASSERTIONS=OFF                                          \
-        -DLLVM_ENABLE_EH=ON                                                   \
-        -DLLVM_ENABLE_PIC=ON                                                  \
-        -DLLVM_ENABLE_RTTI=ON                                                 \
-        -DLLVM_ENABLE_WARNINGS=ON                                             \
-        -DLLVM_TARGET_ARCH="host"                                             \
-        -DLLVM_ENABLE_FFI=ON                                                  \
-        -DLLVM_ENABLE_ZLIB=ON                                                 \
-        -DLLVM_USE_OPROFILE=ON                                                \
-        -DLLVM_PARALLEL_COMPILE_JOBS="$CORES"                                 \
-        -DLLVM_PARALLEL_LINK_JOBS="1"                                         \
-        -DLLVM_BUILD_LLVM_DYLIB=ON                                            \
+  # http://llvm.org/releases/3.8.0/docs/CMake.html      \
+  $CMAKE ../ -G "$CGTOOL"                               \
+        -DCMAKE_CXX_COMPILER="$GCC_PREFIX/bin/g++"      \
+        -DCMAKE_C_COMPILER="$GCC_PREFIX/bin/gcc"        \
+        -DCMAKE_BUILD_TYPE=Release                      \
+        -DCMAKE_INSTALL_PREFIX="$LLVM_INSTALL_PREFIX"   \
+        -DLLVM_LIBDIR_SUFFIX=$ARCH                      \
+        -DLLVM_TARGETS_TO_BUILD="$LLVM_TARGETS"         \
+        -DLLVM_BUILD_EXAMPLES=OFF                       \
+        -DLLVM_INCLUDE_EXAMPLES=OFF                     \
+        -DLLVM_INCLUDE_TESTS=OFF                        \
+        -DLLVM_APPEND_VC_REV=OFF                        \
+        -DLLVM_ENABLE_CXX1Y=ON                          \
+        -DLLVM_ENABLE_ASSERTIONS=OFF                    \
+        -DLLVM_ENABLE_EH=ON                             \
+        -DLLVM_ENABLE_PIC=ON                            \
+        -DLLVM_ENABLE_RTTI=ON                           \
+        -DLLVM_ENABLE_WARNINGS=ON                       \
+        -DLLVM_TARGET_ARCH="host"                       \
+        -DLLVM_ENABLE_FFI=ON                            \
+        -DLLVM_ENABLE_ZLIB=ON                           \
+        -DLLVM_USE_OPROFILE=ON                          \
+        -DLLVM_PARALLEL_COMPILE_JOBS="$CORES"           \
+        -DLLVM_PARALLEL_LINK_JOBS="1"                   \
+        -DLLVM_BUILD_LLVM_DYLIB=ON                      \
         -DLLVM_LINK_LLVM_DYLIB=ON
 
   eval $CMAKE_BUILD
@@ -304,12 +314,17 @@ function compile_install_rtags()
 
   mkdir -p build
   cd build
-  cmake ../ -G "$CGTOOL" \
-	-DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX \
-	-DCMAKE_C_COMPILER=$GCC_PREFIX/bin/gcc \
-	-DCMAKE_CXX_COMPILER=$GCC_PREFIX/bin/g++ \
-	-DLIBCLANG_LLVM_CONFIG_EXECUTABLE=$LLVM_INSTALL_PREFIX/bin/llvm-config \
-	-DCMAKE_CXX_LINK_FLAGS="-Wl,-rpath,$GCC_LIB_PREFIX/lib$ARCH -Wl,-rpath,$GCC_LIB_PREFIX/lib -Wl,-rpath,$LLVM_INSTALL_PREFIX/lib$ARCH -Wl,-rpath,$LLVM_INSTALL_PREFIX/lib" \
+  cmake ../ -G "$CGTOOL"                                                        \
+	-DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX                                  \
+	-DCMAKE_C_COMPILER=$GCC_PREFIX/bin/gcc                                  \
+	-DCMAKE_CXX_COMPILER=$GCC_PREFIX/bin/g++                                \
+	-DLIBCLANG_LLVM_CONFIG_EXECUTABLE=$LLVM_INSTALL_PREFIX/bin/llvm-config  \
+	-DCMAKE_CXX_LINK_FLAGS="
+-Wl,-rpath,$GCC_LIB_PREFIX/lib$ARCH
+-Wl,-rpath,$GCC_LIB_PREFIX/lib
+-Wl,-rpath,$LLVM_INSTALL_PREFIX/lib$ARCH
+-Wl,-rpath,$LLVM_INSTALL_PREFIX/lib
+"                                                                               \
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
   eval $CMAKE_BUILD
   eval $CMAKE_INSTALL_RELEASE
