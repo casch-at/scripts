@@ -32,7 +32,7 @@ readonly LIST="llvm gcc rtags"
 
 ### Customizable variables
 
-CORES=${CORES-$(grep -c ^processor /proc/cpuinfo)}
+CORES=${CORES-$(($(getconf _NPROCESSORS_ONLN) + 1))}
 BUILD_LIST=${BUILD_LIST-}
 BUILD_DIR=${BUILD_DIR-}
 INSTALL_PREFIX=${INSTALL_PREFIX-/usr/local}
