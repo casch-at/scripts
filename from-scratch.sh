@@ -44,9 +44,8 @@ GDB_INSTALL_PREFIX=${GDB_INSTALL_PREFIX-$HOME/rtest/gdb}
 
 CGTOOL=${CGTOOL-Ninja}
 
-LLVM_INSTALL_PREFIX=${LLVM_INSTALL_PREFIX-$INSTALL_PREFIX}
 LLVM_TARGETS=${LLVM_TARGETS-X86;ARM}
-LLVM_VERSION=${LLVM_VERSION-3.8.0}
+LLVM_VERSION=${LLVM_VERSION-3.9.1}
 
 if [ "$(uname -m)" = "x86_64" ]; then
     ARCH=64
@@ -121,6 +120,8 @@ while true; do
         *) echo "[ERROR] Unknown argument '$1' given "; usage; exit 255 ;;
     esac
 done
+
+LLVM_INSTALL_PREFIX=${LLVM_INSTALL_PREFIX-$INSTALL_PREFIX}
 
 if [ -z "$BUILD_LIST" ]; then
     echo -n "[ERROR] Don't know what to build, please provide a semicolon "
@@ -248,10 +249,10 @@ function compile_install_llvm()
 
   test -z "$LLVM_INSTALL_PREFIX" && LLVM_INSTALL_PREFIX=$INSTALL_PREFIX
 
-  # http://llvm.org/releases/3.8.0/docs/CMake.html      \
+  # http://llvm.org/releases/4.0.0/docs/CMake.html
   $CMAKE ../ -G "$CGTOOL"                               \
-        -DCMAKE_CXX_COMPILER="$GCC_PREFIX/bin/g++"      \
-        -DCMAKE_C_COMPILER="$GCC_PREFIX/bin/gcc"        \
+        -DCMAKE_CXX_COMPILER="$GCC_PREFIX/g++"          \
+        -DCMAKE_C_COMPILER="$GCC_PREFIX/gcc"            \
         -DCMAKE_BUILD_TYPE=Release                      \
         -DCMAKE_INSTALL_PREFIX="$LLVM_INSTALL_PREFIX"   \
         -DLLVM_LIBDIR_SUFFIX=$ARCH                      \
@@ -269,10 +270,12 @@ function compile_install_llvm()
         -DLLVM_TARGET_ARCH="host"                       \
         -DLLVM_ENABLE_FFI=ON                            \
         -DLLVM_ENABLE_ZLIB=ON                           \
-        -DLLVM_USE_OPROFILE=ON                          \
+        -DLLVM_USE_OPROFILE=OFF                         \
         -DLLVM_PARALLEL_COMPILE_JOBS="$CORES"           \
         -DLLVM_PARALLEL_LINK_JOBS="1"                   \
         -DLLVM_BUILD_LLVM_DYLIB=ON                      \
+        -DLLVM_INSTALL_UTILS=ON                         \
+        -DLLVM_INSTALL_TOOLCHAIN_ONLY=OFF               \
         -DLLVM_LINK_LLVM_DYLIB=ON
 
   eval $CMAKE_BUILD
@@ -325,7 +328,7 @@ function compile_install_rtags()
 
 
 if [ -z "$BUILD_DIR" ]; then
-    BUILD_DIR=$(mktemp -d "from-scratch-XXX")
+    BUILD_DIR=/tmp/$(mktemp -d "from-scratch-XXX")
 fi
 test -d $BUILD_DIR || mkdir -p $BUILD_DIR
 
