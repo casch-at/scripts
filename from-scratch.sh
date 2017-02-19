@@ -6,6 +6,10 @@
 # Description: Simple script to compile GCC/LLVM-Clang and other software from
 # scratch.
 #
+
+# TODO(cschwarzgruber): Add constructs for error message printing.
+
+
 set -e # Always fail on error, makes live easier :-)
 readonly SCRIPT_NAME=$(basename $0)
 
@@ -106,15 +110,15 @@ while true; do
         --build) BUILD_LIST=$2; shift 2 ;;
         --cmake-gen) CGTOOL=$2; shift 2 ;;
         --jobs) CORES=$2; shift 2 ;;
-        --gcc-prefix) GCC_PREFIX=$2; shift 2 ;;
-        --gcc-lib-prefix) GCC_LIB_PREFIX=$2; shift 2 ;;
+        --gcc-prefix) GCC_PREFIX=${2/\~/$HOME}; shift 2 ;;
+        --gcc-lib-prefix) GCC_LIB_PREFIX=${2/\~/$HOME}; shift 2 ;;
         --gcc-version) GCC_VERSION=$2; shift 2 ;;
-        --prefix) INSTALL_PREFIX=$2; shift 2 ;;
-        --llvm-prefix) LLVM_INSTALL_PREFIX=$2; shift 2 ;;
+        --prefix) INSTALL_PREFIX=${2/\~/$HOME}; shift 2 ;;
+        --llvm-prefix) LLVM_INSTALL_PREFIX=${2/\~/$HOME}; shift 2 ;;
         --llvm-version) LLVM_VERSION=$2; shift 2 ;;
         --llvm-targets) LLVM_TARGETS=$2; shift 2 ;;
         --with-lldb) WITH_LLDB=1; shift 1 ;;
-        --build-dir) BUILD_DIR=$2; shift 2 ;;
+        --build-dir) BUILD_DIR=${2/\~/$HOME}; shift 2 ;;
         --help) usage; exit 0 ;;
         --) shift; break ;;
         *) echo "[ERROR] Unknown argument '$1' given "; usage; exit 255 ;;
