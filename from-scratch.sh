@@ -41,7 +41,8 @@ BUILD_LIST=${BUILD_LIST-}
 BUILD_DIR=${BUILD_DIR-}
 INSTALL_PREFIX=${INSTALL_PREFIX-/usr/local}
 
-GCC_PREFIX=${GCC_PREFIX-$(dirname "$(dirname "$(which gcc)")")}
+GCC_BIN=${GCC_BIN-$(which gcc)}
+GCC_PREFIX=${GCC_PREFIX-$(dirname "$(dirname "$GCC_BIN")")}
 GCC_LIB_PREFIX=${GCC_LIB_PREFIX-/usr}
 GCC_VERSION=${GCC_VERSION-6.1.0}
 GDB_INSTALL_PREFIX=${GDB_INSTALL_PREFIX-$HOME/rtest/gdb}
@@ -185,6 +186,8 @@ function compile_install_gcc()
       --disable-libgcj                          \
       --enable-bootstrap                        \
       --with-isl                                \
+      --with-isl-include=$HOME/gcc/include      \
+      --with-isl-lib=$HOME/gcc/lib              \
       --enable-libmpx                           \
       --enable-gnu-indirect-function            \
       --with-arch_32=i686                       \
