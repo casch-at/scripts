@@ -50,7 +50,7 @@ GDB_INSTALL_PREFIX=${GDB_INSTALL_PREFIX-$HOME/rtest/gdb}
 CGTOOL=${CGTOOL-Ninja}
 
 LLVM_TARGETS=${LLVM_TARGETS-X86;ARM}
-LLVM_VERSION=${LLVM_VERSION-3.9.1}
+LLVM_VERSION=${LLVM_VERSION-4.0.1}
 
 if [ "$(uname -m)" = "x86_64" ]; then
     ARCH=64
@@ -126,6 +126,7 @@ while true; do
     esac
 done
 
+
 LLVM_INSTALL_PREFIX=${LLVM_INSTALL_PREFIX-$INSTALL_PREFIX}
 
 if [ -z "$BUILD_LIST" ]; then
@@ -153,184 +154,184 @@ fi
 # from scratch.
 function compile_install_gcc()
 {
-  local GCC_TAR=gcc-$GCC_VERSION.tar.bz2
+    local GCC_TAR=gcc-$GCC_VERSION.tar.bz2
 
-  test ! -d gcc-$GCC_VERSION &&
-      test ! -f $GCC_TAR &&
-      wget http://ftp.gnu.org/gnu/gcc/gcc-$GCC_VERSION/$GCC_TAR
+    test ! -d gcc-$GCC_VERSION &&
+        test ! -f $GCC_TAR &&
+        wget http://ftp.gnu.org/gnu/gcc/gcc-$GCC_VERSION/$GCC_TAR
 
-  test ! -d gcc-$GCC_VERSION &&
-      tar xf $GCC_TAR
+    test ! -d gcc-$GCC_VERSION &&
+        tar xf $GCC_TAR
 
-  cd gcc-$GCC_VERSION
-  mkdir -p build
-  cd build
+    cd gcc-$GCC_VERSION
+    mkdir -p build
+    cd build
 
-  ../configure                                  \
-      --prefix=$GCC_PREFIX                      \
-      --with-system-zlib                        \
-      --without-included-gettext                \
-      --enable-threads=posix                    \
-      --enable-nls                              \
-      --enable-objc-gc                          \
-      --enable-clocale=gnu                      \
-      --enable-plugin                           \
-      --enable-multilib                         \
-      --enable-checking=release                 \
-      --enable-__cxa_atexit                     \
-      --enable-gnu-unique-object                \
-      --disable-libunwind-exceptions            \
-      --enable-linker-build-id                  \
-      --with-linker-hash-style=gnu              \
-      --enable-initfini-array                   \
-      --disable-libgcj                          \
-      --enable-bootstrap                        \
-      --with-isl                                \
-      --with-isl-include=$HOME/gcc/include      \
-      --with-isl-lib=$HOME/gcc/lib              \
-      --enable-libmpx                           \
-      --enable-gnu-indirect-function            \
-      --with-arch_32=i686                       \
-      --with-tune=generic                       \
-      --build="$(uname -m)-redhat-linux"        \
-      --host="$(uname -m)-redhat-linux"         \
-      --enable-languages=c,c++,objc
+    ../configure                                  \
+        --prefix=$GCC_PREFIX                      \
+        --with-system-zlib                        \
+        --without-included-gettext                \
+        --enable-threads=posix                    \
+        --enable-nls                              \
+        --enable-objc-gc                          \
+        --enable-clocale=gnu                      \
+        --enable-plugin                           \
+        --enable-multilib                         \
+        --enable-checking=release                 \
+        --enable-__cxa_atexit                     \
+        --enable-gnu-unique-object                \
+        --disable-libunwind-exceptions            \
+        --enable-linker-build-id                  \
+        --with-linker-hash-style=gnu              \
+        --enable-initfini-array                   \
+        --disable-libgcj                          \
+        --enable-bootstrap                        \
+        --with-isl                                \
+        --with-isl-include=$HOME/gcc/include      \
+        --with-isl-lib=$HOME/gcc/lib              \
+        --enable-libmpx                           \
+        --enable-gnu-indirect-function            \
+        --with-arch_32=i686                       \
+        --with-tune=generic                       \
+        --build="$(uname -m)-redhat-linux"        \
+        --host="$(uname -m)-redhat-linux"         \
+        --enable-languages=c,c++,objc
 
-  eval $MAKE_BUILD
-  eval $MAKE_INSTALL
+    eval $MAKE_BUILD
+    eval $MAKE_INSTALL
 }
 
 function compile_install_llvm()
 {
-  local COMPRESSION
-  if echo "$LLVM_VERSION" "3.5" | awk '{exit $1<$2?0:1}'; then
-      COMPRESSION=gz
-  else
-      COMPRESSION=xz
-  fi
-  readonly LLVM_TAR=llvm-$LLVM_VERSION.src.tar.$COMPRESSION
-  readonly CFE_TAR=cfe-$LLVM_VERSION.src.tar.$COMPRESSION
-  readonly COMPILER_RT_TAR=compiler-rt-$LLVM_VERSION.src.tar.$COMPRESSION
-  readonly LLVM_DIR=llvm-$LLVM_VERSION
+    local COMPRESSION
+    if echo "$LLVM_VERSION" "3.5" | awk '{exit $1<$2?0:1}'; then
+        COMPRESSION=gz
+    else
+        COMPRESSION=xz
+    fi
+    readonly LLVM_TAR=llvm-$LLVM_VERSION.src.tar.$COMPRESSION
+    readonly CFE_TAR=cfe-$LLVM_VERSION.src.tar.$COMPRESSION
+    readonly COMPILER_RT_TAR=compiler-rt-$LLVM_VERSION.src.tar.$COMPRESSION
+    readonly LLVM_DIR=llvm-$LLVM_VERSION
 
-  # llvm src
-  test ! -d $LLVM_DIR &&
-      test ! -f $LLVM_TAR  &&
-      wget http://llvm.org/releases/$LLVM_VERSION/$LLVM_TAR
-  test ! -d $LLVM_DIR &&
-      tar xf $LLVM_TAR &&
-      mv llvm-$LLVM_VERSION.src $LLVM_DIR
+    # llvm src
+    test ! -d $LLVM_DIR &&
+        test ! -f $LLVM_TAR  &&
+        wget http://llvm.org/releases/$LLVM_VERSION/$LLVM_TAR
+    test ! -d $LLVM_DIR &&
+        tar xf $LLVM_TAR &&
+        mv llvm-$LLVM_VERSION.src $LLVM_DIR
 
-  # clang src
-  test ! -d $LLVM_DIR/tools/clang &&
-      test ! -f $CFE_TAR &&
-      wget http://llvm.org/releases/$LLVM_VERSION/$CFE_TAR
-  test ! -d $LLVM_DIR/tools/clang &&
-      tar xf $CFE_TAR -C $LLVM_DIR/tools &&
-      mv $LLVM_DIR/tools/cfe-$LLVM_VERSION.src $LLVM_DIR/tools/clang
+    # clang src
+    test ! -d $LLVM_DIR/tools/clang &&
+        test ! -f $CFE_TAR &&
+        wget http://llvm.org/releases/$LLVM_VERSION/$CFE_TAR
+    test ! -d $LLVM_DIR/tools/clang &&
+        tar xf $CFE_TAR -C $LLVM_DIR/tools &&
+        mv $LLVM_DIR/tools/cfe-$LLVM_VERSION.src $LLVM_DIR/tools/clang
 
-  # compiler-rt src
-  test ! -d $LLVM_DIR/projects/compiler-rt &&
-      test ! -f $COMPILER_RT_TAR &&
-      wget http://llvm.org/releases/$LLVM_VERSION/$COMPILER_RT_TAR
-  test ! -d $LLVM_DIR/projects/compiler-rt &&
-      tar xf $COMPILER_RT_TAR -C $LLVM_DIR/projects &&
-      mv $LLVM_DIR/projects/compiler-rt-$LLVM_VERSION.src \
-         $LLVM_DIR/projects/compiler-rt
+    # compiler-rt src
+    test ! -d $LLVM_DIR/projects/compiler-rt &&
+        test ! -f $COMPILER_RT_TAR &&
+        wget http://llvm.org/releases/$LLVM_VERSION/$COMPILER_RT_TAR
+    test ! -d $LLVM_DIR/projects/compiler-rt &&
+        tar xf $COMPILER_RT_TAR -C $LLVM_DIR/projects &&
+        mv $LLVM_DIR/projects/compiler-rt-$LLVM_VERSION.src \
+           $LLVM_DIR/projects/compiler-rt
 
-  if [ ! -z "$WITH_LLDB" ]; then
-      readonly COMPILER_LLDB_TAR=lldb-$LLVM_VERSION.src.tar.$COMPRESSION
-      test ! -d $LLVM_DIR/tools/lldb &&
-          test ! -f $COMPILER_LLDB_TAR &&
-          wget http://llvm.org/releases/$LLVM_VERSION/$COMPILER_LLDB_TAR
-      test ! -d $LLVM_DIR/tools/lldb &&
-          tar xf $COMPILER_LLDB_TAR -C $LLVM_DIR/tools &&
-          mv $LLVM_DIR/tools/lldb-$LLVM_VERSION.src \
-             $LLVM_DIR/tools/lldb
-  fi
-  # TODO(cschwarzgruber): Maybe add the other available LLVM/Clang software
-  # packages too, but make them optional.
+    if [ ! -z "$WITH_LLDB" ]; then
+        readonly COMPILER_LLDB_TAR=lldb-$LLVM_VERSION.src.tar.$COMPRESSION
+        test ! -d $LLVM_DIR/tools/lldb &&
+            test ! -f $COMPILER_LLDB_TAR &&
+            wget http://llvm.org/releases/$LLVM_VERSION/$COMPILER_LLDB_TAR
+        test ! -d $LLVM_DIR/tools/lldb &&
+            tar xf $COMPILER_LLDB_TAR -C $LLVM_DIR/tools &&
+            mv $LLVM_DIR/tools/lldb-$LLVM_VERSION.src \
+               $LLVM_DIR/tools/lldb
+    fi
+    # TODO(cschwarzgruber): Maybe add the other available LLVM/Clang software
+    # packages too, but make them optional.
 
-  mkdir -p $LLVM_DIR/build
-  cd $LLVM_DIR/build
+    mkdir -p $LLVM_DIR/build
+    cd $LLVM_DIR/build
 
-  test -z "$LLVM_INSTALL_PREFIX" && LLVM_INSTALL_PREFIX=$INSTALL_PREFIX
+    test -z "$LLVM_INSTALL_PREFIX" && LLVM_INSTALL_PREFIX=$INSTALL_PREFIX
 
-  # http://llvm.org/releases/4.0.0/docs/CMake.html
-  $CMAKE ../ -G "$CGTOOL"                               \
-        -DCMAKE_CXX_COMPILER="$GCC_PREFIX/g++"          \
-        -DCMAKE_C_COMPILER="$GCC_PREFIX/gcc"            \
-        -DCMAKE_BUILD_TYPE=Release                      \
-        -DCMAKE_INSTALL_PREFIX="$LLVM_INSTALL_PREFIX"   \
-        -DLLVM_LIBDIR_SUFFIX=$ARCH                      \
-        -DLLVM_TARGETS_TO_BUILD="$LLVM_TARGETS"         \
-        -DLLVM_BUILD_EXAMPLES=OFF                       \
-        -DLLVM_INCLUDE_EXAMPLES=OFF                     \
-        -DLLVM_INCLUDE_TESTS=OFF                        \
-        -DLLVM_APPEND_VC_REV=OFF                        \
-        -DLLVM_ENABLE_CXX1Y=ON                          \
-        -DLLVM_ENABLE_ASSERTIONS=OFF                    \
-        -DLLVM_ENABLE_EH=ON                             \
-        -DLLVM_ENABLE_PIC=ON                            \
-        -DLLVM_ENABLE_RTTI=ON                           \
-        -DLLVM_ENABLE_WARNINGS=ON                       \
-        -DLLVM_TARGET_ARCH="host"                       \
-        -DLLVM_ENABLE_FFI=ON                            \
-        -DLLVM_ENABLE_ZLIB=ON                           \
-        -DLLVM_USE_OPROFILE=OFF                         \
-        -DLLVM_PARALLEL_COMPILE_JOBS="$CORES"           \
-        -DLLVM_PARALLEL_LINK_JOBS="1"                   \
-        -DLLVM_BUILD_LLVM_DYLIB=ON                      \
-        -DLLVM_INSTALL_UTILS=ON                         \
-        -DLLVM_INSTALL_TOOLCHAIN_ONLY=OFF               \
-        -DLLVM_LINK_LLVM_DYLIB=ON
+    # http://llvm.org/releases/4.0.0/docs/CMake.html
+    $CMAKE ../ -G "$CGTOOL"                                \
+           -DCMAKE_CXX_COMPILER="$GCC_PREFIX/bin/g++"      \
+           -DCMAKE_C_COMPILER="$GCC_PREFIX/bin/gcc"        \
+           -DCMAKE_BUILD_TYPE=Release                      \
+           -DCMAKE_INSTALL_PREFIX="$LLVM_INSTALL_PREFIX"   \
+           -DLLVM_LIBDIR_SUFFIX=$ARCH                      \
+           -DLLVM_TARGETS_TO_BUILD="$LLVM_TARGETS"         \
+           -DLLVM_BUILD_EXAMPLES=OFF                       \
+           -DLLVM_INCLUDE_EXAMPLES=OFF                     \
+           -DLLVM_INCLUDE_TESTS=OFF                        \
+           -DLLVM_APPEND_VC_REV=OFF                        \
+           -DLLVM_ENABLE_CXX1Y=ON                          \
+           -DLLVM_ENABLE_ASSERTIONS=OFF                    \
+           -DLLVM_ENABLE_EH=ON                             \
+           -DLLVM_ENABLE_PIC=ON                            \
+           -DLLVM_ENABLE_RTTI=ON                           \
+           -DLLVM_ENABLE_WARNINGS=ON                       \
+           -DLLVM_TARGET_ARCH="host"                       \
+           -DLLVM_ENABLE_FFI=ON                            \
+           -DLLVM_ENABLE_ZLIB=ON                           \
+           -DLLVM_USE_OPROFILE=OFF                         \
+           -DLLVM_PARALLEL_COMPILE_JOBS="$CORES"           \
+           -DLLVM_PARALLEL_LINK_JOBS="1"                   \
+           -DLLVM_BUILD_LLVM_DYLIB=ON                      \
+           -DLLVM_INSTALL_UTILS=ON                         \
+           -DLLVM_INSTALL_TOOLCHAIN_ONLY=OFF               \
+           -DLLVM_LINK_LLVM_DYLIB=ON
 
-  eval $CMAKE_BUILD
-  eval $CMAKE_INSTALL_RELEASE
-  ### Those are default values
-  # -DDEFAULT_SYSROOT=""
-  # -DLLVM_BUILD_32_BITS_=OFF
-  # -DLLVM_BUILD_DOCS=OFF
-  # -DLLVM_ENABLE_DOXYGEN=OFF
-  # -DLLVM_ENABLE_DOXYGEN_QT_HELP=OFF
-  # -DLLVM_DOXYGEN_SVG=OFF
-  # -DLLVM_ENABLE_SPHINX=OFF
-  # -DSPHINX_OUTPUT_HTML=ON
-  # -DSPHINX_OUTPUT_MAN=ON
-  # -DSPHINX_WARNINGS_AS_ERRORS=ON
-  # -DBUILD_SHARED_LIBS=ON
-  ### Only useful on OS X
-  # -DLLVM_CREATE_XCODE_TOOLCHAIN=OFF
+    eval $CMAKE_BUILD
+    eval $CMAKE_INSTALL_RELEASE
+    ### Those are default values
+    # -DDEFAULT_SYSROOT=""
+    # -DLLVM_BUILD_32_BITS_=OFF
+    # -DLLVM_BUILD_DOCS=OFF
+    # -DLLVM_ENABLE_DOXYGEN=OFF
+    # -DLLVM_ENABLE_DOXYGEN_QT_HELP=OFF
+    # -DLLVM_DOXYGEN_SVG=OFF
+    # -DLLVM_ENABLE_SPHINX=OFF
+    # -DSPHINX_OUTPUT_HTML=ON
+    # -DSPHINX_OUTPUT_MAN=ON
+    # -DSPHINX_WARNINGS_AS_ERRORS=ON
+    # -DBUILD_SHARED_LIBS=ON
+    ### Only useful on OS X
+    # -DLLVM_CREATE_XCODE_TOOLCHAIN=OFF
 }
 
 function compile_install_rtags()
 {
-  if [ ! -d $BUILD_DIR/rtags ]; then
-	  $GIT clone --recursive https://github.com/Andersbakken/rtags.git
-	  cd $BUILD_DIR/rtags
-  else
-	  cd $BUILD_DIR/rtags
-	  $GIT pull
-          $GIT submodule init
-	  $GIT submodule update
-  fi
+    if [ ! -d $BUILD_DIR/rtags ]; then
+	$GIT clone --recursive https://github.com/Andersbakken/rtags.git
+	cd $BUILD_DIR/rtags
+    else
+	cd $BUILD_DIR/rtags
+	$GIT pull
+        $GIT submodule init
+	$GIT submodule update
+    fi
 
-  mkdir -p build
-  cd build
-  cmake ../ -G "$CGTOOL"                                                        \
-	-DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX                                  \
-	-DCMAKE_C_COMPILER=$GCC_PREFIX/bin/gcc                                  \
-	-DCMAKE_CXX_COMPILER=$GCC_PREFIX/bin/g++                                \
-	-DLIBCLANG_LLVM_CONFIG_EXECUTABLE=$LLVM_INSTALL_PREFIX/bin/llvm-config  \
-	-DCMAKE_CXX_LINK_FLAGS="
+    mkdir -p build
+    cd build
+    cmake ../ -G "$CGTOOL"                                                        \
+	  -DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX                                  \
+	  -DCMAKE_C_COMPILER=$GCC_PREFIX/bin/gcc                                  \
+	  -DCMAKE_CXX_COMPILER=$GCC_PREFIX/bin/g++                                \
+	  -DLIBCLANG_LLVM_CONFIG_EXECUTABLE=$LLVM_INSTALL_PREFIX/bin/llvm-config  \
+	  -DCMAKE_CXX_LINK_FLAGS="
 -Wl,-rpath,$GCC_LIB_PREFIX/lib$ARCH
 -Wl,-rpath,$GCC_LIB_PREFIX/lib
 -Wl,-rpath,$LLVM_INSTALL_PREFIX/lib$ARCH
 -Wl,-rpath,$LLVM_INSTALL_PREFIX/lib
 "                                                                               \
-        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-  eval $CMAKE_BUILD
-  eval $CMAKE_INSTALL_RELEASE
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    eval $CMAKE_BUILD
+    eval $CMAKE_INSTALL_RELEASE
 }
 
 
@@ -340,8 +341,8 @@ fi
 test -d $BUILD_DIR || mkdir -p $BUILD_DIR
 
 for pkg in ${BUILD_LIST/;/ }; do
-  cd $BUILD_DIR
-  compile_install_$pkg
+    cd $BUILD_DIR
+    compile_install_$pkg
 done
 
 exit 0
