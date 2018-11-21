@@ -12,7 +12,7 @@ readonly SCRIPT_NAME=$(basename $0)
 ### Programs
 
 readonly MAKE=$(which make)
-readonly CMAKE=$(which cmake)
+readonly CMAKE=$(which cmake3 || which cmake)
 readonly GIT=$(which git)
 
 ### Handy variables
@@ -22,6 +22,7 @@ readonly GIT=$(which git)
 readonly CMAKE_BUILD='nice -n 19 $CMAKE --build . -- -j $CORES'
 readonly CMAKE_INSTALL_DEBUG='$CMAKE --build . --target install'
 readonly CMAKE_INSTALL_RELEASE='$CMAKE --build . --target install/strip'
+readonly CMAKE_PACK="$CMAKE --build . --target package"
 readonly MAKE_BUILD='nice -n 19 $MAKE -j $CORES'
 readonly MAKE_INSTALL='$MAKE install'
 }
@@ -82,7 +83,8 @@ function usage()
     --llvm-targets     For what targets llvm should be built (default $LLVM_TARGETS).
     --with-lldb        Whether to build LLVM debuger or not (default OFF).
     --prefix           General installation prefix (default $INSTALL_PREFIX).
-
+    --packager         packager to be used (ex: RPM). If non-nil, package of the type
+                       will be created. So far used by llvm build only.
 
     Useful websites:
     - LLVM build instruction for LLVM 3.8.0
@@ -97,7 +99,7 @@ EOF
 
 TEMP=$(getopt -o - -n $SCRIPT_NAME                                                      \
               -l build:,cmake-gen,jobs:,gcc-prefix:,gcc-lib-prefix:,gcc-version:        \
-              -l prefix:,llvm-prefix:,llvm-version:,with-lldb,build-dir:,help           \
+              -l prefix:,llvm-prefix:,llvm-version:,with-lldb,build-dir:,help,packager: \
               -- "$@")
 
 eval set -- "$TEMP"
@@ -117,6 +119,7 @@ while true; do
         --with-lldb) WITH_LLDB=1; shift 1 ;;
         --build-dir) BUILD_DIR=$2; shift 2 ;;
         --help) usage; exit 0 ;;
+        --packager) PACKAGER=$2; shift 2 ;;
         --) shift; break ;;
         *) echo "[ERROR] Unknown argument '$1' given "; usage; exit 255 ;;
     esac
@@ -248,35 +251,41 @@ function compile_install_llvm()
 
   test -z "$LLVM_INSTALL_PREFIX" && LLVM_INSTALL_PREFIX=$INSTALL_PREFIX
 
-  # http://llvm.org/releases/3.8.0/docs/CMake.html      \
-  $CMAKE ../ -G "$CGTOOL"                               \
-        -DCMAKE_CXX_COMPILER="$GCC_PREFIX/bin/g++"      \
-        -DCMAKE_C_COMPILER="$GCC_PREFIX/bin/gcc"        \
-        -DCMAKE_BUILD_TYPE=Release                      \
-        -DCMAKE_INSTALL_PREFIX="$LLVM_INSTALL_PREFIX"   \
-        -DLLVM_LIBDIR_SUFFIX=$ARCH                      \
-        -DLLVM_TARGETS_TO_BUILD="$LLVM_TARGETS"         \
-        -DLLVM_BUILD_EXAMPLES=OFF                       \
-        -DLLVM_INCLUDE_EXAMPLES=OFF                     \
-        -DLLVM_INCLUDE_TESTS=OFF                        \
-        -DLLVM_APPEND_VC_REV=OFF                        \
-        -DLLVM_ENABLE_CXX1Y=ON                          \
-        -DLLVM_ENABLE_ASSERTIONS=OFF                    \
-        -DLLVM_ENABLE_EH=ON                             \
-        -DLLVM_ENABLE_PIC=ON                            \
-        -DLLVM_ENABLE_RTTI=ON                           \
-        -DLLVM_ENABLE_WARNINGS=ON                       \
-        -DLLVM_TARGET_ARCH="host"                       \
-        -DLLVM_ENABLE_FFI=ON                            \
-        -DLLVM_ENABLE_ZLIB=ON                           \
-        -DLLVM_USE_OPROFILE=ON                          \
-        -DLLVM_PARALLEL_COMPILE_JOBS="$CORES"           \
-        -DLLVM_PARALLEL_LINK_JOBS="1"                   \
-        -DLLVM_BUILD_LLVM_DYLIB=ON                      \
-        -DLLVM_LINK_LLVM_DYLIB=ON
+  # http://llvm.org/releases/3.8.0/docs/CMake.html                \
+  $CMAKE ../ -G "$CGTOOL"                                         \
+        -DCMAKE_CXX_COMPILER="$GCC_PREFIX/bin/g++"                \
+        -DCMAKE_C_COMPILER="$GCC_PREFIX/bin/gcc"                  \
+        -DCMAKE_BUILD_TYPE=Release                                \
+        -DCMAKE_INSTALL_PREFIX="$LLVM_INSTALL_PREFIX"             \
+        -DCPACK_PACKAGING_INSTALL_PREFIX="$LLVM_INSTALL_PREFIX"   \
+        -DLLVM_LIBDIR_SUFFIX=$ARCH                                \
+        -DLLVM_TARGETS_TO_BUILD="$LLVM_TARGETS"                   \
+        -DLLVM_BUILD_EXAMPLES=OFF                                 \
+        -DLLVM_INCLUDE_EXAMPLES=OFF                               \
+        -DLLVM_INCLUDE_TESTS=OFF                                  \
+        -DLLVM_APPEND_VC_REV=OFF                                  \
+        -DLLVM_ENABLE_CXX1Y=ON                                    \
+        -DLLVM_ENABLE_ASSERTIONS=OFF                              \
+        -DLLVM_ENABLE_EH=ON                                       \
+        -DLLVM_ENABLE_PIC=ON                                      \
+        -DLLVM_ENABLE_RTTI=ON                                     \
+        -DLLVM_ENABLE_WARNINGS=ON                                 \
+        -DLLVM_TARGET_ARCH="host"                                 \
+        -DLLVM_ENABLE_FFI=ON                                      \
+        -DLLVM_ENABLE_ZLIB=ON                                     \
+        -DLLVM_USE_OPROFILE=ON                                    \
+        -DLLVM_PARALLEL_COMPILE_JOBS="$CORES"                     \
+        -DLLVM_PARALLEL_LINK_JOBS="1"                             \
+        -DLLVM_BUILD_LLVM_DYLIB=ON                                \
+        -DLLVM_LINK_LLVM_DYLIB=ON                                 \
+        -DCPACK_GENERATOR="$PACKAGER"
 
   eval $CMAKE_BUILD
   eval $CMAKE_INSTALL_RELEASE
+  if [ -n "$PACKAGER" ]
+  then
+      eval $CMAKE_PACK
+  fi
   ### Those are default values
   # -DDEFAULT_SYSROOT=""
   # -DLLVM_BUILD_32_BITS_=OFF
